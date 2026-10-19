@@ -3,6 +3,8 @@
 Dashboard WWW dla serwera Factorio 2.0 i bot-pomocnik dla Claude Code (serwer MCP).
 
 - **Przegląd**: ile maszyn pracuje, prąd, braki, badania.
+- **Plan**: wybierasz cel (SPM, czyli nauka na minutę) i styl budowy (Main Bus, City Blocks, bez stylu, opcjonalnie Mall). Strona liczy z receptur i prędkości twoich maszyn kolejne kroki, linie busa w taśmach, bloki hut, stan malla, proporcje maszyn między liniami i elektrowni oraz ściągę klasycznych proporcji.
+- **Jednostki /s albo /min**, przełączane jak w kalkulatorach społeczności.
 - **Sugestie**: konkretne rady do istniejących budowli, np. ile maszyn albo wierteł dobudować, co ulepszyć, gdzie są puste sloty modułów, kiedy kończy się złoże.
 - **Mapa**: cała fabryka (budynki, taśmy, rury, tory, ruda) z pinezkami problemów. Pinezki grupują się przy oddaleniu, po kliknięciu pokazują szczegóły i tag GPS do wklejenia na czat w grze.
 - **Produkcja, energia, wydobycie, badania, trendy z 24 h.**

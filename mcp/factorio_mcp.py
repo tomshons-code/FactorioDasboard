@@ -22,9 +22,12 @@ def cfg():
         return json.load(fh)
 
 
-def api(path, method="GET"):
+def api(path, method="GET", data=None):
     c = cfg()
-    req = urllib.request.Request(c["url"].rstrip("/") + path, method=method)
+    body = json.dumps(data).encode("utf-8") if data is not None else None
+    req = urllib.request.Request(c["url"].rstrip("/") + path, method=method, data=body)
+    if body is not None:
+        req.add_header("Content-Type", "application/json")
     token = base64.b64encode(("%s:%s" % (c["username"], c["password"])).encode()).decode()
     req.add_header("Authorization", "Basic " + token)
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -193,6 +196,18 @@ def t_problems(args):
     return {"total": len(marks), "groups": out[:40], "factory_bounds": bounds}
 
 
+def t_plan(_):
+    p = api("/api/plan")
+    p["items"] = [i for i in p.get("items") or [] if i.get("coverage", 1) < 0.95]
+    return p
+
+
+def t_set_goal(args):
+    patch = {k: args[k] for k in ("strategy", "spm", "mall", "packs", "belt") if k in args}
+    api("/api/settings", method="POST", data=patch)
+    return t_plan({})
+
+
 def t_refresh(_):
     api("/api/refresh", method="POST")
     return {"ok": True, "info": "Zlecono zrzut. Dane będą za ~1-2 min (po nowym autosave albo wymuszone)."}
@@ -227,6 +242,11 @@ TOOLS = [
      {"type": "object", "properties": {"kind": {"type": "string"}}}, t_suggestions),
     ("factory_problems", "Problemy z mapy fabryki (każda maszyna, która nie pracuje) pogrupowane wg statusu i typu, z pozycjami GPS. Podaj x, y i radius, żeby zawęzić do obszaru.",
      {"type": "object", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "radius": {"type": "number"}}}, t_problems),
+    ("factory_plan", "Plan budowy pod cel gracza (SPM = nauka/min) i wybrany styl (Main Bus / City Blocks / bez stylu, opcjonalnie Mall): kolejne kroki od surowców w górę, linie busa w taśmach, bloki hut i placówki, stan malla, proporcje maszyn między liniami, ściąga proporcji i proporcje elektrowni. Liczone z receptur i prędkości maszyn w tej grze.", NOARGS, t_plan),
+    ("set_goal", "Zmienia cel i styl budowy (zapisuje na serwerze, widać też na stronie). strategy: main_bus|city_blocks|none, spm: liczba, mall: true/false, packs: 'auto' albo lista pakietów, belt: auto|transport-belt|fast-transport-belt|express-transport-belt.",
+     {"type": "object", "properties": {"strategy": {"type": "string", "enum": ["main_bus", "city_blocks", "none"]},
+                                       "spm": {"type": "number"}, "mall": {"type": "boolean"},
+                                       "packs": {}, "belt": {"type": "string"}}}, t_set_goal),
     ("factory_refresh", "Wymusza nowy zrzut danych z gry (kopia ostatniego autosave'a).", NOARGS, t_refresh),
 ]
 HANDLERS = {name: fn for name, _, _, fn in TOOLS}

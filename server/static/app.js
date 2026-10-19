@@ -38,6 +38,7 @@ const svg = (name, cls = "") => `<svg class="${cls}" viewBox="0 0 24 24" fill="n
 
 const VIEWS = [
   ["overview", "Przegląd", "overview"],
+  ["plan", "Plan", "target"],
   ["suggestions", "Sugestie", "suggestions"],
   ["map", "Mapa", "map"],
   ["production", "Produkcja", "production"],
@@ -48,9 +49,12 @@ const VIEWS = [
 ];
 
 const S = {data: null, map: null, status: null, view: "overview", rendered: {}, mapLoaded: 0,
-           sugFilter: "all", lineFilter: "", lineSort: "util", trendItem: null, chart: null};
+           sugFilter: "all", unit: (() => { try { return localStorage.getItem("unit") || "min"; } catch (e) { return "min"; } })(), lineFilter: "", lineSort: "util", trendItem: null, chart: null};
 
 const n1 = v => v == null || isNaN(v) ? "–" : Math.abs(v) >= 1000 ? Math.round(v).toLocaleString("pl") : Math.abs(v) >= 100 ? Math.round(v) : (+v).toFixed(1).replace(/\.0$/, "");
+const UF = () => S.unit === "s" ? 1 / 60 : 1;
+const UL = () => S.unit === "s" ? "/s" : "/min";
+const rt = v => v == null || isNaN(v) ? "–" : n1(v * UF());
 const pct = v => v == null ? "–" : Math.round(v * 100) + "%";
 function watts(w) {
   if (w == null) return "–";
@@ -156,7 +160,7 @@ function renderView(v, force) {
   if (!S.data) return;
   if (!force && S.rendered[v] === S.data.generated && v !== "map") return;
   const el = $(`.view[data-view="${v}"]`);
-  const fn = {overview: vOverview, suggestions: vSuggestions, map: vMap, production: vProduction,
+  const fn = {plan: vPlan, overview: vOverview, suggestions: vSuggestions, map: vMap, production: vProduction,
               power: vPower, mining: vMining, research: vResearch, trends: vTrends}[v];
   fn(el);
   S.rendered[v] = S.data.generated;
@@ -200,8 +204,8 @@ function vOverview(el) {
       <div class="actions">${loc(a.gps)}</div></div>`).join("")}</div>` : empty("Wszystko gra", "Brak alertów."), {badge: alerts.length, badgeCls: alerts.length ? "bad" : "good"})}
   </div>
   <div class="grid2">
-    ${card("Produkcja nauki", table(["Pakiet", "Produkcja/min|num", "Zużycie/min|num", "Bilans|num"], (d.science || []).map(x => [item(x.name), n1(x.prod), n1(x.cons), `<span class="${x.prod - x.cons < -0.5 ? "neg" : "pos"}">${x.prod - x.cons >= 0 ? "+" : ""}${n1(x.prod - x.cons)}</span>`]), {empty: empty("Brak nauki", "Nie produkujesz jeszcze pakietów.")}), {hint: "średnia z 10 min"})}
-    ${card("Najwięcej produkujesz", table(["Przedmiot", "Produkcja/min|num", "Zużycie/min|num"], (d.top_production || []).slice(0, 10).map(x => [item(x.name), n1(x.prod), n1(x.cons)])), {hint: "top 10"})}
+    ${card("Produkcja nauki", table(["Pakiet", "Produkcja" + UL() + "|num", "Zużycie" + UL() + "|num", "Bilans|num"], (d.science || []).map(x => [item(x.name), rt(x.prod), rt(x.cons), `<span class="${x.prod - x.cons < -0.5 ? "neg" : "pos"}">${x.prod - x.cons >= 0 ? "+" : ""}${rt(x.prod - x.cons)}</span>`]), {empty: empty("Brak nauki", "Nie produkujesz jeszcze pakietów.")}), {hint: "średnia z 10 min"})}
+    ${card("Najwięcej produkujesz", table(["Przedmiot", "Produkcja" + UL() + "|num", "Zużycie" + UL() + "|num"], (d.top_production || []).slice(0, 10).map(x => [item(x.name), rt(x.prod), rt(x.cons)])), {hint: "top 10"})}
   </div>`;
 }
 
@@ -210,6 +214,95 @@ function sugRow(x) {
   return `<div class="row"><div class="sev ${x.severity}">${svg(k[0])}</div>
     <div class="body"><div class="t">${x.item ? ico(x.item) + " " : ""}${esc(x.title)}</div><div class="d">${esc(x.detail)}</div></div>
     <div class="actions">${loc(x.gps)}</div></div>`;
+}
+
+const STATE_PL = {missing: ["Brak linii", "bad"], starved: ["Stoi — brak składników", "mid"], ok: ["Działa", "good"]};
+
+function planSection(x) {
+  const rows = x.rows || [];
+  if (x.kind === "tips") return card(x.title, `<div class="list">${rows.map(t => `<div class="row"><div class="sev low">${svg("check")}</div><div class="body"><div class="d" style="color:var(--text)">${esc(t)}</div></div></div>`).join("")}</div>`);
+  if (x.kind === "lanes") return card(x.title, table(["Linia", "Potrzeba" + UL() + "|num", "Masz" + UL() + "|num", "Taśm potrzeba|num", "Taśm masz|num", "Pokrycie"], rows.map(r => [
+    item(r.item), rt(r.required), rt(r.actual), r.belts_needed.toFixed(2), r.belts_now.toFixed(2),
+    `<div style="min-width:110px">${meter(Math.min(1, r.actual / r.required), r.actual < r.required * .9 ? "bad" : "good")}</div>`])) +
+    (x.note ? `<div class="muted" style="margin-top:8px">${esc(x.note)}</div>` : ""));
+  if (x.kind === "smelt") return card(x.title, table(["Płyty", "Potrzeba" + UL() + "|num", "Masz" + UL() + "|num", "Bloków potrzeba|num", "Masz (w taśmach)|num"],
+    rows.map(r => [item(r.item), rt(r.required), rt(r.actual), r.blocks_needed, r.blocks_now.toFixed(2)])));
+  if (x.kind === "ores") return card(x.title, table(["Ruda", "Potrzeba" + UL() + "|num", "Masz" + UL() + "|num", "Placówek (2 taśmy)|num", "Wagonów/min|num"],
+    rows.map(r => [item(r.item), rt(r.required), rt(r.actual), r.outposts, r.wagons_per_min.toFixed(2)])));
+  return card(x.title, table(["Moduł", "Maszyn na cel|num"], rows.map(r => [item(r.item), r.machines])));
+}
+
+async function vPlan(el, reload) {
+  if (!S.plan || reload || S.planFor !== S.data.generated) {
+    try { S.plan = await api("api/plan"); S.planFor = S.data.generated; }
+    catch (e) { el.innerHTML = card("Plan", empty("Brak danych", e.message)); return; }
+  }
+  const P = S.plan, cfg = P.settings;
+  const target = cfg.spm, now = P.spm_now || 0;
+  const packsSel = cfg.packs === "auto" ? P.unlocked_packs : cfg.packs;
+  const machinesTotal = P.items.reduce((a, i) => a + (i.machines_needed && i.recipe ? i.machines_needed : 0), 0);
+  el.innerHTML = `
+  <div class="card"><div class="card-h"><h3>Cel i styl budowy</h3><span class="hint">zapisywane na serwerze — bot w Claude Code widzi to samo</span></div>
+    <div class="card-b" style="display:flex;flex-direction:column;gap:14px">
+      <div class="plan-row"><span class="muted plan-l">Styl</span>
+        <div class="seg">${Object.entries(P.strategies).map(([k, l]) => `<button class="${cfg.strategy === k ? "on" : ""}" data-strat="${k}">${l}</button>`).join("")}</div>
+        <span class="chip ${cfg.mall ? "on" : ""}" id="mallToggle" style="cursor:pointer">${svg("box")}Mall ${cfg.mall ? "włączony" : "wyłączony"}</span></div>
+      <div class="plan-row"><span class="muted plan-l">Cel SPM</span>
+        <label class="search" style="min-width:110px;max-width:140px"><input id="spmInput" type="number" min="1" value="${target}"><span class="muted">/min</span></label>
+        ${[10, 30, 45, 60, 90, 120, 240].map(v => `<span class="chip ${v === target ? "on" : ""}" data-spm="${v}" style="cursor:pointer">${v}</span>`).join("")}</div>
+      <div class="plan-row"><span class="muted plan-l">Nauka</span>
+        ${P.unlocked_packs.map(p => `<span class="chip ${packsSel.includes(p) ? "on" : ""}" data-pack="${esc(p)}" style="cursor:pointer">${ico(p)}${esc(pretty(p).replace(" science pack", ""))}</span>`).join("") || '<span class="muted">brak odblokowanych pakietów</span>'}</div>
+      <div class="plan-row"><span class="muted plan-l">Taśma</span>
+        <div class="seg">${["auto"].concat(P.belts).map(b => `<button class="${(cfg.belt || "auto") === b ? "on" : ""}" data-belt="${b}">${b === "auto" ? "Najlepsza" : esc(pretty(b))}</button>`).join("")}</div></div>
+    </div></div>
+  <div class="kpis">
+    ${kpi("research", "SPM teraz", n1(now), `cel: ${target}/min każdego pakietu`, now >= target * .95 ? "good" : now >= target * .5 ? "warn" : "bad", meter(Math.min(1, now / target), now >= target * .95 ? "good" : ""))}
+    ${kpi("build", "Kroki do celu", P.steps.length, P.steps.length ? "od surowców w górę" : "cel osiągnięty!", P.steps.length ? "warn" : "good")}
+    ${kpi("cpu", "Maszyn na cel", machinesTotal, "przy prędkości Twoich maszyn")}
+    ${kpi("production", "Taśma", esc(pretty(P.belt.name)), `${rt(P.belt.per_min)}${UL()} na taśmę`)}
+  </div>
+  ${card("Następne kroki", P.steps.length ? `<div class="list">${P.steps.map((x, i) => `<div class="row"><div class="sev ${i < 3 ? "high" : "mid"}" style="font:700 14px var(--display)">${i + 1}</div>
+      <div class="body"><div class="t">${ico(x.item)} ${esc(pretty(x.item))} <span class="badge">poziom ${x.tier}</span></div><div class="d">${esc(x.text)}</div></div></div>`).join("")}</div>`
+      : empty("Cel osiągnięty", "Podnieś SPM, żeby zobaczyć kolejne kroki."),
+    {hint: "jak w kalkulatorach: najpierw surowce i płyty, potem półprodukty"})}
+  ${P.style.sections.length ? `<div class="grid2">${P.style.sections.map(planSection).join("")}</div>` : ""}
+  ${P.mall ? card("Mall — automatyczna produkcja budynków", `
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><b style="font:700 22px var(--display)">${P.mall.automated}/${P.mall.total}</b>
+        <div style="flex:1">${meter(P.mall.automated / Math.max(1, P.mall.total), "good")}</div></div>
+      ${table(["Budynek", "Stan", "Duchy czekają|num", "Brakuje"], P.mall.rows.map(r => [item(r.item), `<span class="badge ${STATE_PL[r.state][1]}">${STATE_PL[r.state][0]}</span>`, r.ghosts || "", r.missing.map(m => ico(m)).join(" ")]))}`,
+    {hint: "pełne wyjście w mallu to dobrze — półka jest pełna"}) : ""}
+  <div class="grid2">
+    ${card("Proporcje maszyn", table(["Połączenie", "Idealnie|num", "Masz|num", "Bilans", "Co zrobić"], (P.ratios || []).map(r => [
+      `${ico(r.producer)} → ${ico(r.consumer)} <span class="muted" style="font-size:12px">${esc(pretty(r.item))}</span>`,
+      r.ratio, `${r.producer_machines} : ${r.consumer_machines}`,
+      `<div style="min-width:90px">${meter(Math.min(1, r.balance || 0), (r.balance || 0) < .9 ? "bad" : "good")}</div>`,
+      r.missing ? `<span class="neg">dobuduj ${r.missing}× ${esc(pretty(r.producer))}</span>` : r.balance > 1.5 ? `<span class="muted">nadmiar ~${r.spare}</span>` : '<span class="pos">ok</span>'])),
+      {hint: "wg prędkości Twoich maszyn"})}
+    ${card("Ściąga proporcji", table(["Co", "Proporcja|num", "Uwagi"], (P.cheatsheet || []).map(r => [esc(r.what), `<b>${esc(r.ratio)}</b>`, `<span class="muted">${esc(r.note)}</span>`])), {hint: "klasyczne liczby z wiki i społeczności"})}
+  </div>
+  ${(P.power || []).length ? card("Proporcje elektrowni", `<div class="list">${P.power.map(r => `<div class="row"><div class="sev ${r.ok ? "low" : "mid"}">${svg(r.ok ? "check" : "power")}</div>
+      <div class="body"><div class="t">${esc(r.setup)}: ${esc(r.have)}</div><div class="d">Idealnie ${esc(r.ideal)} — ${esc(r.hint)}</div></div></div>`).join("")}</div>`) : ""}
+  ${card("Pełne zapotrzebowanie na cel", table(["Przedmiot", "Poziom|num", "Potrzeba" + UL() + "|num", "Masz" + UL() + "|num", "Pokrycie", "Maszyn: potrzeba / masz|num"], P.items.map(i => [
+      item(i.item), i.tier, rt(i.required), rt(i.actual),
+      `<div style="min-width:100px">${meter(Math.min(1, i.coverage), i.coverage < .9 ? "bad" : "good")}<span class="muted" style="font-size:12px">${pct(Math.min(9.99, i.coverage))}</span></div>`,
+      i.machines_needed == null ? "–" : `${i.machines_needed} / ${i.machines_now == null ? "?" : i.machines_now}`])))}`;
+  const save = async patch => {
+    try {
+      await api("api/settings", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(patch)});
+      await vPlan(el, true);
+    } catch (e) { toast("Nie zapisano: " + e.message); }
+  };
+  $$("[data-strat]", el).forEach(b => b.onclick = () => save({strategy: b.dataset.strat}));
+  $$("[data-spm]", el).forEach(b => b.onclick = () => save({spm: +b.dataset.spm}));
+  $$("[data-belt]", el).forEach(b => b.onclick = () => save({belt: b.dataset.belt}));
+  $$("[data-pack]", el).forEach(b => b.onclick = () => {
+    const cur = new Set(packsSel);
+    if (cur.has(b.dataset.pack)) cur.delete(b.dataset.pack); else cur.add(b.dataset.pack);
+    if (!cur.size) return toast("Wybierz co najmniej jeden pakiet");
+    save({packs: cur.size === P.unlocked_packs.length ? "auto" : [...cur]});
+  });
+  $("#mallToggle").onclick = () => save({mall: !cfg.mall});
+  $("#spmInput").onchange = e => save({spm: +e.target.value || 60});
 }
 
 function vSuggestions(el) {
@@ -233,15 +326,15 @@ function vProduction(el) {
     <div class="row"><div class="sev ${x.machines >= 5 ? "high" : "mid"}">${svg("alert")}</div>
       <div class="body">
         <div class="t">${item(x.item)} <span class="badge bad">${x.machines} maszyn stoi</span>
-          <span class="muted" style="font-weight:400;font-size:12.5px">prod. ${n1(x.prod)}/min · zużycie ${n1(x.cons)}/min</span></div>
+          <span class="muted" style="font-weight:400;font-size:12.5px">prod. ${rt(x.prod)}${UL()} · zużycie ${rt(x.cons)}${UL()}</span></div>
         <div class="chain">${(x.cause || []).map((c, i, a) => `${i ? '<span class="arrow">→</span>' : ""}<span class="node ${i === a.length - 1 ? "root" : ""}"><b>${esc(pretty(c.item))}</b>: ${esc(c.reason)}</span>`).join("")}</div>
         <div class="chain">${x.recipes.slice(0, 5).map(r => `<span class="chip">${esc(pretty(r.recipe))} <b>×${r.machines}</b></span>`).join("")}</div>
       </div>
       <div class="actions">${locs(x.recipes.flatMap(r => r.gps), 1)}</div></div>`).join("")}</div>` : empty("Brak braków", "Wszystkie maszyny dostają składniki."),
     {badge: sh.length, badgeCls: sh.length ? "bad" : "good", hint: "łańcuch pokazuje prawdziwą przyczynę"})}
   <div class="grid2">
-    ${card("Deficyty", table(["Przedmiot", "Prod./min|num", "Zużycie/min|num", "Brakuje|num"], (d.deficits || []).map(x => [
-      `<a href="#/trends" data-trend="${esc(x.item)}" style="text-decoration:none">${item(x.item)}</a>`, n1(x.prod), n1(x.cons), `<span class="neg">−${n1(x.deficit)}</span>`]),
+    ${card("Deficyty", table(["Przedmiot", "Prod." + UL() + "|num", "Zużycie" + UL() + "|num", "Brakuje|num"], (d.deficits || []).map(x => [
+      `<a href="#/trends" data-trend="${esc(x.item)}" style="text-decoration:none">${item(x.item)}</a>`, rt(x.prod), rt(x.cons), `<span class="neg">−${rt(x.deficit)}</span>`]),
       {empty: empty("Bez deficytów", "Produkujesz tyle, ile zużywasz.")}), {badge: (d.deficits || []).length, hint: "zużycie > produkcja (10 min)"})}
     ${card("Zatory — pełne wyjście", table(["Receptura", "Zablokowane|num", "Gdzie"], (d.blocked || []).map(x => [item(x.recipe), `${x.machines} / ${x.of}`, locs(x.gps, 1)]),
       {empty: empty("Bez zatorów", "Wszystko jest odbierane na bieżąco.")}), {badge: (d.blocked || []).length, hint: "nadprodukcja lub pełna taśma"})}
@@ -257,11 +350,11 @@ function renderLines() {
   let rows = (S.data.lines || []).filter(l => !f || l.recipe.toLowerCase().includes(f) || (l.product || "").toLowerCase().includes(f));
   const sorters = {util: (a, b) => a.utilization - b.utilization, machines: (a, b) => b.machines - a.machines, name: (a, b) => a.recipe.localeCompare(b.recipe)};
   rows = rows.slice().sort(sorters[S.lineSort]);
-  box.innerHTML = card("Linie produkcyjne", table(["Receptura", "Maszyny|num", "Wykorzystanie", "Maks./min|num", "Faktycznie/min|num", "Statusy", "Problemy"], rows.map(l => [
+  box.innerHTML = card("Linie produkcyjne", table(["Receptura", "Maszyny|num", "Wykorzystanie", "Maks." + UL() + "|num", "Faktycznie" + UL() + "|num", "Statusy", "Problemy"], rows.map(l => [
     `${item(l.recipe)}<div class="muted" style="font-size:12px;margin-top:2px">${Object.entries(l.entities).map(([k, v]) => esc(pretty(k)) + " ×" + v).join(", ")}</div>`,
     `${l.working}/${l.machines}`,
     `<div style="min-width:110px">${meter(l.utilization, l.utilization < .5 ? "bad" : l.utilization > .85 ? "good" : "")}<span class="muted" style="font-size:12px">${pct(l.utilization)}</span></div>`,
-    n1(l.max_per_min), n1(l.actual_per_min),
+    rt(l.max_per_min), rt(l.actual_per_min),
     Object.entries(l.status).map(([k, v]) => `<span class="chip">${esc(k)} <b>${v}</b></span>`).join(" "),
     l.problems.slice(0, 2).map(p => `<div style="display:flex;gap:6px;align-items:center;margin:2px 0"><span class="muted" style="font-size:12px">${esc(p.status)}</span>${locs(p.gps, 1)}</div>`).join("")])),
     {badge: rows.length, right: `<div class="seg">${[["util", "Najgorsze"], ["machines", "Największe"], ["name", "A–Z"]].map(([k, l]) => `<button class="${S.lineSort === k ? "on" : ""}" data-lsort="${k}">${l}</button>`).join("")}</div>
@@ -305,10 +398,10 @@ function vMining(el) {
   const tot = {};
   sites.forEach(s => { if (s.resource !== "(wyczerpane)") { tot[s.resource] = tot[s.resource] || {drills: 0, rate: 0, rem: 0, inf: s.infinite}; tot[s.resource].drills += s.drills; tot[s.resource].rate += s.rate_per_min || 0; tot[s.resource].rem += s.remaining || 0; } });
   el.innerHTML = `<div class="kpis">${Object.entries(tot).map(([k, t]) => `<div class="kpi"><div class="k">${ico(k)} ${esc(pretty(k))}</div>
-      <div class="v">${n1(t.rate)}<span class="muted" style="font-size:14px">/min</span></div><div class="s">${t.drills} wierteł · ${t.inf ? "∞" : n1(t.rem) + " zostało"}</div></div>`).join("")}</div>
-  ${card("Pola wydobywcze", table(["Surowiec", "Wiertła|num", "Pracuje|num", "Wyczerpane|num", "Zostało|num", "Wydobycie/min|num", "Starczy na", "Gdzie"], sites.map(x => [
+      <div class="v">${rt(t.rate)}<span class="muted" style="font-size:14px">${UL()}</span></div><div class="s">${t.drills} wierteł · ${t.inf ? "∞" : n1(t.rem) + " zostało"}</div></div>`).join("")}</div>
+  ${card("Pola wydobywcze", table(["Surowiec", "Wiertła|num", "Pracuje|num", "Wyczerpane|num", "Zostało|num", "Wydobycie" + UL() + "|num", "Starczy na", "Gdzie"], sites.map(x => [
     item(x.resource), x.drills, x.working, x.depleted ? `<span class="neg">${x.depleted}</span>` : 0,
-    x.infinite ? "∞" : n1(x.remaining), n1(x.rate_per_min),
+    x.infinite ? "∞" : n1(x.remaining), rt(x.rate_per_min),
     x.minutes_left == null ? "–" : `<div style="min-width:100px"><b class="${x.minutes_left < 120 ? "neg" : x.minutes_left < 600 ? "" : "pos"}">${mins(x.minutes_left)}</b>${meter(Math.min(1, x.minutes_left / 1440), x.minutes_left < 120 ? "bad" : "good")}</div>`,
     locs([x.gps].concat(x.problem_gps || []), 1)])), {badge: sites.length, hint: "szacunek: ruda pod wiertłami ÷ tempo"})}`;
 }
@@ -331,7 +424,7 @@ function vResearch(el) {
       <div class="chain" style="margin-top:8px">${locs(R.labs_gps, 2)}</div>`)}
   </div>
   ${card("Kolejka badań", (R.queue || []).length ? `<div class="chain">${R.queue.map((q, i) => `${i ? '<span class="arrow">→</span>' : ""}<span class="chip">${ico(q)} ${esc(pretty(q))}</span>`).join("")}</div>` : empty("Pusta kolejka", "Dodaj technologie, żeby laboratoria nie stały."))}
-  ${card("Pakiety nauki", table(["Pakiet", "Produkcja/min|num", "Zużycie/min|num", "Bilans|num"], (S.data.science || []).map(x => [item(x.name), n1(x.prod), n1(x.cons), `<span class="${x.prod - x.cons < -0.5 ? "neg" : "pos"}">${n1(x.prod - x.cons)}</span>`])))}`;
+  ${card("Pakiety nauki", table(["Pakiet", "Produkcja" + UL() + "|num", "Zużycie" + UL() + "|num", "Bilans|num"], (S.data.science || []).map(x => [item(x.name), rt(x.prod), rt(x.cons), `<span class="${x.prod - x.cons < -0.5 ? "neg" : "pos"}">${rt(x.prod - x.cons)}</span>`])))}`;
 }
 
 function vTrends(el) {
@@ -362,8 +455,8 @@ async function showTrend(it) {
   const ctx = cv.getContext("2d");
   const grad = (c1) => { const g = ctx.createLinearGradient(0, 0, 0, 320); g.addColorStop(0, c1 + "55"); g.addColorStop(1, c1 + "00"); return g; };
   const ds = it
-    ? [{label: "Produkcja/min", data: hist.map(h => h.v[0]), borderColor: "#34d399", backgroundColor: grad("#34d399"), fill: true},
-       {label: "Zużycie/min", data: hist.map(h => h.v[1]), borderColor: "#ff8a3d", backgroundColor: grad("#ff8a3d"), fill: true}]
+    ? [{label: "Produkcja" + UL(), data: hist.map(h => h.v[0] * UF()), borderColor: "#34d399", backgroundColor: grad("#34d399"), fill: true},
+       {label: "Zużycie" + UL(), data: hist.map(h => h.v[1] * UF()), borderColor: "#ff8a3d", backgroundColor: grad("#ff8a3d"), fill: true}]
     : [{label: "Produkcja prądu (MW)", data: hist.map(h => h.power[0] / 1e6), borderColor: "#ffb547", backgroundColor: grad("#ffb547"), fill: true},
        {label: "Zużycie prądu (MW)", data: hist.map(h => h.power[1] / 1e6), borderColor: "#60a5fa", backgroundColor: grad("#60a5fa"), fill: true},
        {label: "Pracujące maszyny %", data: hist.map(h => h.working_pct * 100), borderColor: "#34d399", yAxisID: "y2", borderDash: [5, 4]}];
@@ -485,6 +578,18 @@ function init() {
   buildNav();
   $("#refreshBtn").innerHTML = svg("refresh") + "<span>Zrzut teraz</span>";
   $("#refreshBtn").onclick = refreshNow;
+  const unitBtn = $("#unitBtn");
+  const showUnit = () => unitBtn.innerHTML = `<button class="${S.unit === "s" ? "on" : ""}" data-u="s">/s</button><button class="${S.unit !== "s" ? "on" : ""}" data-u="min">/min</button>`;
+  showUnit();
+  unitBtn.onclick = e => {
+    const u = e.target.dataset && e.target.dataset.u;
+    if (!u) return;
+    S.unit = u;
+    try { localStorage.setItem("unit", u); } catch (err) {}
+    showUnit();
+    S.rendered = {};
+    renderView(S.view, true);
+  };
   $("#themeBtn").onclick = () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
   setTheme(document.documentElement.dataset.theme || "dark");
   $$(".view").forEach(v => v.innerHTML = `<div class="kpis">${'<div class="skeleton"></div>'.repeat(4)}</div><div class="skeleton" style="height:300px"></div>`);

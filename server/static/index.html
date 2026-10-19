@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 <script>
   try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
@@ -33,12 +33,14 @@
       </div>
       <div class="spacer"></div>
       <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText">…</span></span>
+      <div class="seg" id="unitBtn" title="Jednostka"></div>
       <button class="btn icon" id="themeBtn" title="Zmień motyw"></button>
       <button class="btn primary" id="refreshBtn"></button>
     </header>
 
     <main class="content">
       <section class="view" data-view="overview"></section>
+      <section class="view" data-view="plan"></section>
       <section class="view" data-view="suggestions"></section>
       <section class="view" data-view="map"></section>
       <section class="view" data-view="production"></section>
@@ -53,7 +55,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="map.js" defer></script>
-<script src="app.js" defer></script>
+<script src="map.js?v=4" defer></script>
+<script src="app.js?v=4" defer></script>
 </body>
 </html>

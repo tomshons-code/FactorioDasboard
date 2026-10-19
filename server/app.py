@@ -17,6 +17,7 @@ sys.path.insert(0, HERE)
 
 import analyze
 import shadow
+import strategy
 
 CONFIG_PATH = os.environ.get("FACTORIO_BOT_CONFIG", os.path.join(HERE, "config.json"))
 STATIC = os.path.join(HERE, "static")
@@ -62,6 +63,8 @@ class State:
         self.raw = self._read("raw.json")
         self.history = self._read("history.json") or []
         self.blobs = {}
+        self.settings = self._read("settings.json") or dict(strategy.DEFAULTS)
+        self._plan_cache = (None, None)
         for f in os.listdir(self.dir):
             if f.endswith(".tmp"):
                 os.remove(self._path(f))
@@ -103,6 +106,33 @@ class State:
         if map_bytes:
             blobs["map"] = Blob(map_bytes)
         self.blobs = blobs
+
+    def save_settings(self, new):
+        cfg = dict(self.settings)
+        if new.get("strategy") in strategy.STRATEGIES:
+            cfg["strategy"] = new["strategy"]
+        if "mall" in new:
+            cfg["mall"] = bool(new["mall"])
+        if "spm" in new:
+            cfg["spm"] = max(1, min(100000, float(new["spm"])))
+        if "packs" in new:
+            cfg["packs"] = new["packs"] if new["packs"] == "auto" else [str(p) for p in new["packs"]][:20]
+        if "belt" in new:
+            cfg["belt"] = str(new["belt"])
+        with self.lock:
+            self.settings = cfg
+            self._write("settings.json", cfg)
+        return cfg
+
+    def plan(self):
+        with self.lock:
+            raw, latest, cfg = self.raw, self.latest, dict(self.settings)
+        if not raw or not latest:
+            return None
+        key = (latest.get("generated"), json.dumps(cfg, sort_keys=True))
+        if self._plan_cache[0] != key:
+            self._plan_cache = (key, Blob(strategy.build_plan(raw, latest, cfg)))
+        return self._plan_cache[1]
 
     def run_once(self, force=False):
         saves = os.path.join(self.cfg["factorio_dir"], "saves")
@@ -251,6 +281,13 @@ def make_handler(state):
                 if not blob:
                     return self._send_json(404, {"error": "brak danych", "status": self._status()})
                 return self._send_blob(blob)
+            if path == "/api/plan":
+                blob = state.plan()
+                if not blob:
+                    return self._send_json(404, {"error": "brak danych"})
+                return self._send_blob(blob)
+            if path == "/api/settings":
+                return self._send_json(200, state.settings)
             if path == "/api/history":
                 item = params["item"]
                 with state.lock:
@@ -269,6 +306,13 @@ def make_handler(state):
             if self.path == "/api/refresh":
                 state.wake.set()
                 return self._send_json(202, {"ok": True})
+            if self.path == "/api/settings":
+                try:
+                    length = min(int(self.headers.get("Content-Length", 0)), 10000)
+                    body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+                    return self._send_json(200, state.save_settings(body))
+                except (ValueError, TypeError) as e:
+                    return self._send_json(400, {"error": str(e)})
             self._send_json(404, {"error": "not found"})
 
     return Handler

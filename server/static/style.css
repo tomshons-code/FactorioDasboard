@@ -343,3 +343,9 @@ th.num { font-family: var(--font); }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+.plan-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.plan-l { width: 90px; flex: none; }
+.top .seg button { padding: 5px 9px; }
+@media (max-width: 860px) { #unitBtn { display: none; } }
+#spmInput { width: 64px; flex: none; }
+.badge { white-space: nowrap; }
