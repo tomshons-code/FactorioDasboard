@@ -96,23 +96,38 @@ def build(raw, a, rates):
         out.append({"severity": sev, "kind": kind, "title": title, "detail": detail, "gps": gps, "item": item})
 
     cap, demand, prod_lines, cons_lines = capacity_model(raw, rates)
-    for item, need in demand.items():
-        have = cap.get(item)
-        if not have or need <= have * 1.05 or need - have < 0.5:
-            continue
+    for sh in a.get("shortages") or []:
+        item = sh["item"]
+        waiting = sh["machines"]
+        need = demand.get(item, 0)
+        have = cap.get(item, 0)
         lines = sorted(prod_lines.get(item, []), key=lambda l: -l["machines"])
+        consumers = ", ".join(r["recipe"] for r in sh["recipes"][:4])
+        gps = (sh["recipes"][0]["gps"] or [None])[0] if sh["recipes"] else None
+        sev = "high" if waiting >= 5 else "mid"
         if not lines:
+            add(sev, "build", "Nikt nie produkuje %s" % item,
+                "Czeka na to %d maszyn (%s), a w fabryce nie ma linii, która to robi." % (waiting, consumers), gps, item)
             continue
         main = lines[0]
-        missing = need - have
-        n = max(1, math.ceil(missing / main["per_machine"]))
         what = "wiertła" if main.get("mining") else "maszyny"
-        consumers = ", ".join(sorted({c["recipe"] for c in cons_lines.get(item, [])})[:4])
-        add("high" if item in shortage_items else "mid", "build",
-            "Dobuduj ~%d× %s → %s" % (n, main["entity"], item),
-            "Przy pełnej pracy %s potrzebują %s/min %s, a obecne %s (%d) dają maks. %s/min. Brakuje %s/min."
-            % (consumers, _fmt(need), item, what, main["machines"], _fmt(have), _fmt(missing)),
-            main["gps"] or next((c["gps"] for c in cons_lines.get(item, []) if c["gps"]), None), item)
+        if need > have * 1.05:
+            consumer_machines = sum(crafters.get(r["recipe"], {}).get("machines", 0) for r in sh["recipes"]) or waiting
+            starved = min(1.0, waiting / consumer_machines)
+            missing = min(need - have, need * starved)
+            n = max(1, math.ceil(missing / main["per_machine"]))
+            add(sev, "build", "Dobuduj ~%d× %s → %s" % (n, main["entity"], item),
+                "Stoją maszyny (%d: %s), bo brakuje %s. Obecne %s (%d) dają maks. %s/min, a przy pełnej pracy potrzeba %s/min."
+                % (waiting, consumers, item, what, main["machines"], _fmt(have), _fmt(need)),
+                main["gps"] or gps, item)
+        else:
+            up = crafters.get(main["recipe"], {})
+            if sum(_d(up.get("missing")).values()) >= max(1, up.get("machines", 0) * 0.3):
+                continue
+            add(sev, "logistics", "Problem z dostawą %s" % item,
+                "Produkcja wystarcza (maks. %s/min przy zapotrzebowaniu %s/min), a mimo to stoją maszyny (%d: %s). "
+                "Sprawdź taśmy, podajniki i czy linia %s sama nie czeka na składniki."
+                % (_fmt(have), _fmt(need), waiting, consumers, main["recipe"]), gps, item)
 
     for item, have in cap.items():
         need = demand.get(item, 0)

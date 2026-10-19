@@ -283,6 +283,11 @@ def main():
             s = state.latest["summary"]
             log("OK: czas gry %s, maszyn %d (%.0f%% pracuje), braków %d, sugestii %d" % (
                 state.latest["game_time"], s["machines"], s["working_pct"] * 100, s["shortages"], s["suggestions"]))
+            statuses = {}
+            for r in (state.raw.get("crafters") or {}).values():
+                for k, v in (r.get("status") or {}).items():
+                    statuses[k] = statuses.get(k, 0) + v
+            log("Statusy maszyn: " + ", ".join("%s=%d" % kv for kv in sorted(statuses.items(), key=lambda kv: -kv[1])))
             for a in state.latest["suggestions"][:10]:
                 log(" - [%s] %s" % (a["severity"], a["title"]))
         sys.exit(0 if ok else 1)

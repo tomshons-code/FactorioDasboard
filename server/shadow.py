@@ -116,7 +116,7 @@ def _collect(cfg, log=print):
             "require_user_verification": False,
             "game_password": secrets.token_hex(16),
             "max_players": 1,
-            "auto_pause": True,
+            "auto_pause": False,
             "autosave_interval": 9999,
             "autosave_slots": 1,
         }, fh)
@@ -150,7 +150,9 @@ def _collect(cfg, log=print):
                     time.sleep(2)
             if conn is None:
                 raise RuntimeError("Timeout przy starcie cienia. Log: %s\n%s" % (log_path, _tail(log_path)))
-            log("Cień gotowy po %.0fs, zbieram dane..." % (time.time() - t0))
+            warmup = float(cfg.get("warmup_seconds", 5))
+            log("Cień gotowy po %.0fs, rozgrzewka %.0fs..." % (time.time() - t0, warmup))
+            time.sleep(warmup)
             with conn:
                 body = conn.command("/fb_collect")
             try:
