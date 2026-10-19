@@ -1,5 +1,7 @@
 import time
 
+import suggest
+
 OK = {"working", "normal"}
 SHORTAGE = {"item_ingredient_shortage", "fluid_ingredient_shortage", "no_ingredients",
             "missing_required_fluid", "no_input_fluid"}
@@ -185,6 +187,8 @@ def analyze(raw):
         nets.append({
             "id": n.get("id"), "poles": n.get("poles"),
             "production_w": n.get("production_w", 0), "consumption_w": n.get("consumption_w", 0),
+            "capacity_w": n.get("capacity_w", 0),
+            "load": (n.get("consumption_w", 0) / n["capacity_w"]) if n.get("capacity_w") else None,
             "accumulators": n.get("accumulators", 0),
             "acc_charge": (n.get("acc_energy", 0) / cap) if cap else None,
             "top_consumers": sorted(d(n.get("consumers")).items(), key=lambda kv: -kv[1])[:8],
@@ -260,7 +264,7 @@ def analyze(raw):
 
     top = sorted(rates.values(), key=lambda r: -r["prod"])
     science = [r for r in rates.values() if r["name"].endswith("science-pack")]
-    return {
+    result = {
         "generated": time.time(),
         "tick": raw.get("tick", 0),
         "game_time": fmt_time(raw.get("tick", 0)),
@@ -272,6 +276,10 @@ def analyze(raw):
             "power_prod_w": sum(n["production_w"] for n in nets),
             "low_power": low_power, "shortages": len(shortages), "deficits": len(deficits),
             "blocked": len(blocked), "depleted_drills": depleted_total,
+            "capacity_w": sum(n["capacity_w"] for n in nets),
+            "ghosts": sum(d(raw.get("ghosts")).values()),
+            "beacons": raw.get("beacons", 0),
+            "entities": sum(d(raw.get("entity_counts")).values()),
         },
         "alerts": alerts,
         "shortages": shortages,
@@ -285,6 +293,39 @@ def analyze(raw):
         "top_production": top[:25],
         "rates": rates,
     }
+    result["suggestions"] = suggest.build(raw, result, rates)
+    result["summary"]["suggestions"] = len(result["suggestions"])
+    return result
+
+
+SEVERITY = {
+    "no_power": 0, "no_fuel": 0, "item_ingredient_shortage": 1, "fluid_ingredient_shortage": 1,
+    "no_ingredients": 1, "missing_required_fluid": 1, "no_input_fluid": 1, "missing_science_packs": 1,
+    "low_power": 1, "no_minable_resources": 1,
+}
+
+
+def markers(raw):
+    out = []
+    for p in raw.get("problems") or []:
+        x, y, surface, st, name, detail = (list(p) + [""] * 6)[:6]
+        out.append([x, y, surface, SEVERITY.get(st, 2), STATUS_PL.get(st, st), name, detail])
+    return out
+
+
+def map_payload(raw, game_map, a):
+    surfaces = {}
+    for name, sm in d(game_map).items():
+        sm = d(sm)
+        surfaces[name] = {
+            "bounds": sm.get("bounds"),
+            "cats": {k: v for k, v in d(sm.get("cats")).items() if isinstance(v, list)},
+            "ores": {k: v for k, v in d(sm.get("ores")).items() if isinstance(v, list)},
+            "ore_cell": sm.get("ore_cell", 2),
+        }
+    sites = [{"resource": s.get("resource"), "bbox": s.get("bbox"), "surface": s.get("surface")}
+             for s in raw.get("mining") or [] if s.get("bbox")]
+    return {"generated": a["generated"], "surfaces": surfaces, "markers": markers(raw), "sites": sites}
 
 
 def history_entry(a):

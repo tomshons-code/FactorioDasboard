@@ -167,6 +167,32 @@ def t_bp_encode(args):
     return {"blueprint_string": "0" + base64.b64encode(zlib.compress(raw, 9)).decode()}
 
 
+def t_suggestions(args):
+    d = latest()
+    sug = d.get("suggestions") or []
+    kind = args.get("kind")
+    if kind:
+        sug = [x for x in sug if x["kind"] == kind or x["severity"] == kind]
+    return {"suggestions": sug}
+
+
+def t_problems(args):
+    m = api("/api/map")
+    marks = m.get("markers") or []
+    x, y, r = args.get("x"), args.get("y"), float(args.get("radius", 64))
+    if x is not None and y is not None:
+        marks = [k for k in marks if abs(k[0] - x) <= r and abs(k[1] - y) <= r]
+    groups = {}
+    for k in marks:
+        g = groups.setdefault((k[4], k[5]), {"status": k[4], "entity": k[5], "count": 0, "examples": []})
+        g["count"] += 1
+        if len(g["examples"]) < 5:
+            g["examples"].append({"gps": "[gps=%d,%d,%s]" % (k[0], k[1], k[2]), "detail": k[6]})
+    out = sorted(groups.values(), key=lambda g: -g["count"])
+    bounds = {n: s.get("bounds") for n, s in (m.get("surfaces") or {}).items()}
+    return {"total": len(marks), "groups": out[:40], "factory_bounds": bounds}
+
+
 def t_refresh(_):
     api("/api/refresh", method="POST")
     return {"ok": True, "info": "Zlecono zrzut. Dane będą za ~1-2 min (po nowym autosave albo wymuszone)."}
@@ -197,6 +223,10 @@ TOOLS = [
      {"type": "object", "properties": {"blueprint": {"type": "string"}}, "required": ["blueprint"]}, t_bp_decode),
     ("blueprint_encode", "Koduje JSON blueprintu ({\"blueprint\": {\"entities\": [{\"name\", \"position\": {\"x\",\"y\"}, \"direction\"?, \"recipe\"?}], \"label\"?}}) do stringa do wklejenia w grze. Kierunki w 2.0: 0=N, 4=E, 8=S, 12=W.",
      {"type": "object", "properties": {"json": {"type": "object"}}, "required": ["json"]}, t_bp_encode),
+    ("factory_suggestions", "Konkretne sugestie do istniejących budowli: ile maszyn/wierteł dobudować i gdzie, nadmiary, ulepszenia maszyn, moduły, prąd, złoża, badania, duchy. Opcjonalny filtr kind: build|rebalance|upgrade|modules|power|mining|research|logistics|high.",
+     {"type": "object", "properties": {"kind": {"type": "string"}}}, t_suggestions),
+    ("factory_problems", "Problemy z mapy fabryki (każda maszyna, która nie pracuje) pogrupowane wg statusu i typu, z pozycjami GPS. Podaj x, y i radius, żeby zawęzić do obszaru.",
+     {"type": "object", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "radius": {"type": "number"}}}, t_problems),
     ("factory_refresh", "Wymusza nowy zrzut danych z gry (kopia ostatniego autosave'a).", NOARGS, t_refresh),
 ]
 HANDLERS = {name: fn for name, _, _, fn in TOOLS}

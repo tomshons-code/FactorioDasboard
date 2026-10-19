@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 220" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff8a3d" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ff8a3d" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bld" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a3346"/>
+      <stop offset="1" stop-color="#161c28"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb547"/>
+      <stop offset="1" stop-color="#ff6a2b"/>
+    </linearGradient>
+    <pattern id="belt" width="12" height="8" patternUnits="userSpaceOnUse">
+      <rect width="12" height="8" fill="#3a3220"/>
+      <path d="M2 1 L6 4 L2 7" stroke="#ffb547" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <animateTransform attributeName="patternTransform" type="translate" from="0 0" to="12 0" dur="1s" repeatCount="indefinite"/>
+    </pattern>
+  </defs>
+  <rect width="480" height="220" fill="url(#sky)"/>
+  <g opacity=".5">
+    <circle cx="96" cy="40" r="10" fill="#8a94a8" opacity=".25">
+      <animate attributeName="cy" values="52;12" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="6;16" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values=".35;0" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="104" cy="30" r="12" fill="#8a94a8" opacity=".2">
+      <animate attributeName="cy" values="52;6" dur="5s" begin="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="6;18" dur="5s" begin="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values=".35;0" dur="5s" begin="2.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <rect x="88" y="56" width="20" height="74" rx="3" fill="url(#bld)"/>
+  <rect x="88" y="66" width="20" height="4" fill="url(#acc)" opacity=".8"/>
+  <rect x="40" y="110" width="110" height="70" rx="8" fill="url(#bld)" stroke="#33405a"/>
+  <rect x="54" y="126" width="22" height="16" rx="3" fill="#ffb547" opacity=".85"/>
+  <rect x="84" y="126" width="22" height="16" rx="3" fill="#ffb547" opacity=".55"/>
+  <rect x="114" y="126" width="22" height="16" rx="3" fill="#ffb547" opacity=".85"/>
+  <rect x="190" y="88" width="120" height="92" rx="10" fill="url(#bld)" stroke="#33405a"/>
+  <g transform="translate(250 134)">
+    <g>
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="8s" repeatCount="indefinite"/>
+      <circle r="22" fill="#0e131d" stroke="url(#acc)" stroke-width="5" stroke-dasharray="7 4.5"/>
+      <circle r="9" fill="url(#acc)"/>
+    </g>
+  </g>
+  <rect x="350" y="120" width="90" height="60" rx="8" fill="url(#bld)" stroke="#33405a"/>
+  <g transform="translate(395 150)">
+    <g>
+      <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="5s" repeatCount="indefinite"/>
+      <circle r="13" fill="#0e131d" stroke="#2dd4bf" stroke-width="4" stroke-dasharray="5 3.5"/>
+      <circle r="5" fill="#2dd4bf"/>
+    </g>
+  </g>
+  <rect x="0" y="186" width="480" height="10" fill="url(#belt)"/>
+  <rect x="0" y="196" width="480" height="24" fill="#0b0f17" opacity=".6"/>
+  <g fill="#ffb547">
+    <rect x="30" y="182" width="8" height="5" rx="1">
+      <animate attributeName="x" values="-10;490" dur="9s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="30" y="182" width="8" height="5" rx="1" fill="#c86230">
+      <animate attributeName="x" values="-10;490" dur="9s" begin="3s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="30" y="182" width="8" height="5" rx="1" fill="#7aa2c8">
+      <animate attributeName="x" values="-10;490" dur="9s" begin="6s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+</svg>

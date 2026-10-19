@@ -59,7 +59,33 @@ def _prepare_mods(server_mods, shadow_mods, bot_mod_src):
     shutil.copytree(bot_mod_src, os.path.join(shadow_mods, MOD_NAME))
 
 
+def request_save(cfg, log=print, timeout=90):
+    live = cfg.get("live_rcon") or {}
+    if not live.get("password"):
+        return False
+    saves = os.path.join(cfg["factorio_dir"], "saves")
+    before = os.path.getmtime(newest_save(saves))
+    with Rcon(live.get("host", "127.0.0.1"), int(live.get("port", 27015)), live["password"], timeout=30) as conn:
+        conn.command("/server-save")
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        time.sleep(2)
+        if os.path.getmtime(newest_save(saves)) > before:
+            log("Serwer zapisał świat (/server-save)")
+            return True
+    log("Serwer nie zapisał świata w %ds — używam ostatniego zapisu" % timeout)
+    return False
+
+
 def collect(cfg, log=print):
+    run = os.path.join(cfg["work_dir"], "shadow", "run")
+    try:
+        return _collect(cfg, log)
+    finally:
+        shutil.rmtree(run, ignore_errors=True)
+
+
+def _collect(cfg, log=print):
     fdir = cfg["factorio_dir"]
     work = os.path.join(cfg["work_dir"], "shadow")
     run = os.path.join(work, "run")
@@ -127,19 +153,41 @@ def collect(cfg, log=print):
             log("Cień gotowy po %.0fs, zbieram dane..." % (time.time() - t0))
             with conn:
                 body = conn.command("/fb_collect")
+            try:
+                reply = json.loads(body)
+            except ValueError:
+                raise RuntimeError("Mod nie zwrócił JSON-a (czy się załadował?): %s" % body[:500])
+            if "error" in reply:
+                raise RuntimeError("Błąd w modzie: %s" % reply["error"])
+            if reply.get("files"):
+                out_dir = os.path.join(run, "write-data", "script-output", "factorio-bot")
+                data = _read_when_ready(os.path.join(out_dir, "stats.json"))
+                game_map = _read_when_ready(os.path.join(out_dir, "map.json"))
+            else:
+                data = reply
+                game_map = data.pop("map", {})
         finally:
             proc.kill()
             proc.wait()
-    shutil.rmtree(run, ignore_errors=True)
-
-    try:
-        data = json.loads(body)
-    except ValueError:
-        raise RuntimeError("Mod nie zwrócił JSON-a (czy się załadował?): %s" % body[:500])
-    if "error" in data:
-        raise RuntimeError("Błąd w modzie: %s" % data["error"])
     log("Zebrano dane w %.0fs" % (time.time() - t0))
-    return data, save, save_mtime
+    return data, game_map, save, save_mtime
+
+
+def _read_when_ready(path, timeout=60):
+    deadline = time.time() + timeout
+    last = -1
+    while time.time() < deadline:
+        if os.path.exists(path):
+            size = os.path.getsize(path)
+            if size > 0 and size == last:
+                try:
+                    with open(path, encoding="utf-8") as fh:
+                        return json.load(fh)
+                except ValueError:
+                    pass
+            last = size
+        time.sleep(0.5)
+    raise RuntimeError("Mod nie zapisał pliku %s" % path)
 
 
 def _tail(path, n=20):

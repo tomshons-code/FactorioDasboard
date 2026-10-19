@@ -2,277 +2,58 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080b12">
 <title>Factorio Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-:root {
-  --bg: #16181b; --panel: #22252a; --panel2: #2b2f35; --line: #393e46;
-  --text: #e6e2da; --muted: #9a958c; --accent: #f2a33a; --good: #6cc070;
-  --bad: #e5534b; --mid: #e3b341; --low: #6ea8fe;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-header { position: sticky; top: 0; z-index: 5; background: #111316ee; backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-header h1 { font-size: 17px; margin: 0; color: var(--accent); letter-spacing: .5px; }
-header .meta { color: var(--muted); font-size: 12px; flex: 1; min-width: 200px; }
-button { background: var(--accent); color: #1b1b1b; border: 0; border-radius: 6px; padding: 7px 12px;
-  font-weight: 600; cursor: pointer; }
-button.ghost { background: var(--panel2); color: var(--text); font-weight: 500; }
-nav { display: flex; gap: 6px; padding: 10px 16px 0; flex-wrap: wrap; }
-nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; background: var(--panel); font-size: 13px; }
-nav a:hover { color: var(--text); }
-main { padding: 16px; max-width: 1400px; margin: 0 auto; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-.card .k { color: var(--muted); font-size: 12px; }
-.card .v { font-size: 22px; font-weight: 700; margin-top: 2px; }
-.card .s { color: var(--muted); font-size: 12px; }
-section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-section h2 { margin: 0 0 10px; font-size: 15px; display: flex; gap: 8px; align-items: center; }
-section h2 .n { background: var(--panel2); color: var(--muted); border-radius: 10px; padding: 0 8px; font-size: 12px; }
-.hint { color: var(--muted); font-size: 12px; margin: -4px 0 10px; }
-.tablewrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { color: var(--muted); font-weight: 500; white-space: nowrap; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.alert { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 6px; background: var(--panel2); margin-bottom: 6px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; flex: none; }
-.high { background: var(--bad); } .mid { background: var(--mid); } .low { background: var(--low); }
-.alert .t { flex: 1; }
-.gps { background: transparent; color: var(--low); border: 1px solid #3b4f73; padding: 1px 6px; font-size: 11px;
-  border-radius: 4px; font-weight: 500; margin: 1px 2px 1px 0; }
-.gps:hover { background: #22324d; }
-.bar { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; min-width: 60px; }
-.bar > i { display: block; height: 100%; background: var(--good); }
-.bad { color: var(--bad); } .good { color: var(--good); } .muted { color: var(--muted); }
-.chain { font-size: 12px; color: var(--muted); }
-.chain b { color: var(--text); font-weight: 600; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
-.grid2 > section { margin-bottom: 0; }
-input[type=search] { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px;
-  padding: 6px 10px; width: 100%; max-width: 320px; margin-bottom: 8px; }
-.tag { display: inline-block; background: var(--panel2); border-radius: 4px; padding: 0 6px; margin: 1px 3px 1px 0; font-size: 12px; color: var(--muted); }
-#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #1b1b1b;
-  padding: 8px 14px; border-radius: 6px; font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
-#toast.on { opacity: 1; }
-.empty { color: var(--muted); padding: 8px 0; }
-canvas { max-height: 260px; }
-@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } main { padding: 12px; } }
-</style>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script>
+  try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 </head>
 <body>
-<header>
-  <h1>⚙ FACTORIO DASHBOARD</h1>
-  <div class="meta" id="meta">Ładowanie…</div>
-  <button class="ghost" onclick="load()">Przeładuj</button>
-  <button id="refresh" onclick="refreshNow()">Zrób zrzut teraz</button>
-</header>
-<nav>
-  <a href="#alerts">Alerty</a><a href="#shortages">Braki</a><a href="#deficits">Deficyty</a>
-  <a href="#blocked">Zatory</a><a href="#power">Prąd</a><a href="#mining">Złoża</a>
-  <a href="#research">Badania</a><a href="#lines">Linie</a><a href="#trend">Trendy</a>
-</nav>
-<main id="app"></main>
-<div id="toast"></div>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="#/overview">
+      <img src="favicon.svg" alt="">
+      <span><b>Factorio Dashboard</b><small>factorio.houseinn.org</small></span>
+    </a>
+    <nav id="nav"></nav>
+    <div class="side-foot" id="sideFoot">Ładowanie…</div>
+  </aside>
 
-<script>
-const $ = s => document.querySelector(s);
-const BASE = location.origin + location.pathname.replace(/[^/]*$/, "");
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const n1 = v => v == null ? "–" : (Math.abs(v) >= 100 ? Math.round(v).toLocaleString("pl") : (+v).toFixed(1));
-const pct = v => v == null ? "–" : Math.round(v * 100) + "%";
-function watts(w) {
-  if (w == null) return "–";
-  const u = ["W","kW","MW","GW","TW"]; let i = 0;
-  while (Math.abs(w) >= 1000 && i < u.length - 1) { w /= 1000; i++; }
-  return w.toFixed(w < 10 ? 2 : 1) + " " + u[i];
-}
-function mins(m) {
-  if (m == null) return "–";
-  if (m < 60) return Math.round(m) + " min";
-  if (m < 60 * 48) return (m / 60).toFixed(1) + " h";
-  return Math.round(m / 1440) + " dni";
-}
-const ago = t => { const s = Date.now() / 1000 - t; return s < 90 ? Math.round(s) + " s temu" : Math.round(s / 60) + " min temu"; };
-function gpsBtns(list) {
-  return (list || []).filter(Boolean).slice(0, 3).map(g =>
-    `<button class="gps" title="Skopiuj i wklej na czat w grze — kliknięcie pokaże miejsce na mapie" onclick="copyGps('${esc(g)}')">📍 ${esc(g.replace(/\[gps=|\]/g, "").split(",").slice(0, 2).join(", "))}</button>`).join("");
-}
-function copyGps(g) {
-  navigator.clipboard?.writeText(g).then(() => toast("Skopiowano " + g + " — wklej na czat w grze"),
-    () => toast(g));
-}
-function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 2500); }
-
-let DATA = null, chart = null, lineFilter = "", trendItem = null;
-
-async function load() {
-  try {
-    const r = await fetch(BASE + "api/latest", {cache: "no-store"});
-    DATA = await r.json();
-    render();
-  } catch (e) { $("#meta").textContent = "Błąd ładowania: " + e; }
-}
-
-async function refreshNow() {
-  await fetch(BASE + "api/refresh", {method: "POST"});
-  toast("Zlecono zrzut — wyniki za ok. minutę");
-  $("#refresh").disabled = true;
-  const t0 = DATA?.generated || 0;
-  for (let i = 0; i < 60; i++) {
-    await new Promise(r => setTimeout(r, 5000));
-    const s = await (await fetch(BASE + "api/latest", {cache: "no-store"})).json();
-    if ((s.generated || 0) > t0 || (s.status?.last_error && !s.status.running && i > 2)) { DATA = s; render(); break; }
-  }
-  $("#refresh").disabled = false;
-}
-
-function render() {
-  const d = DATA, st = d.status || {};
-  if (!d.summary) {
-    $("#meta").textContent = st.last_error ? "Błąd: " + st.last_error : (st.running ? "Trwa pierwszy zrzut…" : "Brak danych");
-    $("#app").innerHTML = `<section><div class="empty">${esc(st.last_error || "Czekam na pierwszy zrzut ze zapisu gry.")}</div></section>`;
-    return;
-  }
-  const s = d.summary;
-  $("#meta").innerHTML = `Czas gry <b>${esc(d.game_time)}</b> · zapis <b>${esc(d.save)}</b> (${ago(d.save_time)}) · zrzut ${ago(d.generated)}`
-    + (st.running ? " · <span class='good'>zbieram…</span>" : "")
-    + (st.last_error ? ` · <span class="bad">błąd: ${esc(st.last_error)}</span>` : "");
-  const R = d.research || {}, cur = R.current;
-  let h = `<div class="cards">
-    ${card("Maszyny pracują", pct(s.working_pct), `${s.working} / ${s.machines}`, s.working_pct < .7 ? "bad" : "good")}
-    ${card("Zużycie prądu", watts(s.power_w), "produkcja " + watts(s.power_prod_w), s.low_power ? "bad" : "")}
-    ${card("Braki składników", s.shortages, "rodzajów", s.shortages ? "bad" : "good")}
-    ${card("Deficyty", s.deficits, "zużycie > produkcja", s.deficits ? "bad" : "good")}
-    ${card("Zatory", s.blocked, "linie z pełnym wyjściem", "")}
-    ${card("Badanie", cur ? pct(cur.progress) : "—", cur ? esc(cur.name) + (cur.eta_min ? " · ~" + mins(cur.eta_min) : "") : "nic się nie bada", cur ? "" : "bad")}
-  </div>`;
-
-  h += sec("alerts", "Najważniejsze teraz", d.alerts.length, d.alerts.length ? d.alerts.map(a =>
-    `<div class="alert"><span class="dot ${a.level}"></span><div class="t">${esc(a.text)}</div>${gpsBtns([a.gps])}</div>`).join("")
-    : `<div class="empty good">Wszystko gra 👌</div>`);
-
-  h += sec("shortages", "Braki — na co czekają maszyny", d.shortages.length,
-    `<div class="hint">Ile maszyn stoi, bo brakuje danego składnika, i gdzie leży prawdziwa przyczyna.</div>` +
-    tbl(["Składnik", "Czeka maszyn|num", "Prod./min|num", "Zużycie/min|num", "Przyczyna", "Gdzie"], d.shortages.map(x => [
-      `<b>${esc(x.item)}</b><div>${x.recipes.slice(0, 4).map(r => `<span class="tag">${esc(r.recipe)} ×${r.machines}</span>`).join("")}</div>`,
-      x.machines, n1(x.prod), n1(x.cons),
-      `<div class="chain">${(x.cause || []).map(c => `<b>${esc(c.item)}</b>: ${esc(c.reason)}`).join(" → ")}</div>`,
-      gpsBtns(x.recipes.flatMap(r => r.gps))])));
-
-  h += `<div class="grid2">` +
-    sec("deficits", "Deficyty — zużycie większe niż produkcja", d.deficits.length,
-      `<div class="hint">Średnia z 10 min. Zapas się kurczy — dobuduj produkcję.</div>` +
-      tbl(["Przedmiot", "Prod./min|num", "Zużycie/min|num", "Brakuje/min|num"], d.deficits.map(x => [
-        `<a href="#trend" onclick="showTrend('${esc(x.item)}')" style="color:inherit">${esc(x.item)}</a>`, n1(x.prod), n1(x.cons), `<span class="bad">−${n1(x.deficit)}</span>`]))) +
-    sec("blocked", "Zatory — pełne wyjście", d.blocked.length,
-      `<div class="hint">Linia produkuje więcej, niż ktoś odbiera (albo taśma/skrzynia pełna).</div>` +
-      tbl(["Receptura", "Zablokowane|num", "Gdzie"], d.blocked.map(x => [esc(x.recipe), `${x.machines} / ${x.of}`, gpsBtns(x.gps)]))) +
-    `</div><div style="height:16px"></div>`;
-
-  h += sec("power", "Prąd", d.power.length, d.power.length ? d.power.map(n => `
-    <div class="card" style="margin-bottom:8px">
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-        <div><span class="k">Sieć #${n.id}</span> · ${n.poles} słupów ${gpsBtns([n.gps])}</div>
-        <div>Zużycie <b>${watts(n.consumption_w)}</b></div>
-        <div>Produkcja <b>${watts(n.production_w)}</b></div>
-        ${n.accumulators ? `<div>Akumulatory ${n.accumulators}× · naładowane <b>${pct(n.acc_charge)}</b></div>` : ""}
+  <div class="main">
+    <header class="top">
+      <div>
+        <h1 id="title">Przegląd</h1>
+        <div class="sub" id="subtitle"></div>
       </div>
-      <div class="s" style="margin-top:6px">Najwięcej biorą: ${n.top_consumers.map(([k, v]) => `<span class="tag">${esc(k)} ${watts(v)}</span>`).join("")}</div>
-      <div class="s">Źródła: ${n.producers.map(([k, v]) => `<span class="tag">${esc(k)} ${watts(v)}</span>`).join("") || "–"}</div>
-    </div>`).join("") + (s.low_power ? `<div class="bad">${s.low_power} maszyn ma za mało prądu.</div>` : "")
-    : `<div class="empty">Brak sieci elektrycznych.</div>`);
+      <div class="spacer"></div>
+      <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText">…</span></span>
+      <button class="btn icon" id="themeBtn" title="Zmień motyw"></button>
+      <button class="btn primary" id="refreshBtn"></button>
+    </header>
 
-  h += sec("mining", "Złoża i wydobycie", d.mining.length,
-    `<div class="hint">Szacunek: pozostała ruda pod wiertłami ÷ tempo wydobycia.</div>` +
-    tbl(["Surowiec", "Wiertła|num", "Pracuje|num", "Wyczerp.|num", "Zostało|num", "Wydob./min|num", "Starczy na|num", "Gdzie"], d.mining.map(x => [
-      esc(x.resource), x.drills, x.working, x.depleted ? `<span class="bad">${x.depleted}</span>` : 0,
-      x.infinite ? "∞" : n1(x.remaining), n1(x.rate_per_min),
-      x.minutes_left == null ? "–" : `<span class="${x.minutes_left < 120 ? "bad" : ""}">${mins(x.minutes_left)}</span>`,
-      gpsBtns([x.gps].concat(x.problem_gps || []))])));
+    <main class="content">
+      <section class="view" data-view="overview"></section>
+      <section class="view" data-view="suggestions"></section>
+      <section class="view" data-view="map"></section>
+      <section class="view" data-view="production"></section>
+      <section class="view" data-view="power"></section>
+      <section class="view" data-view="mining"></section>
+      <section class="view" data-view="research"></section>
+      <section class="view" data-view="trends"></section>
+    </main>
+  </div>
+</div>
+<nav class="mobile-nav glass" id="mnav"></nav>
+<div class="toast" id="toast"></div>
 
-  h += sec("research", "Badania", null, `
-    ${cur ? `<div style="margin-bottom:8px"><b>${esc(cur.name)}</b>${cur.level > 1 ? " (poz. " + cur.level + ")" : ""} — ${pct(cur.progress)}
-      ${cur.eta_min ? " · koniec za ~" + mins(cur.eta_min) : ""}
-      <div class="bar" style="margin-top:6px"><i style="width:${(cur.progress * 100).toFixed(1)}%"></i></div>
-      <div class="s muted" style="margin-top:6px">Koszt: ${cur.units}× [${cur.ingredients.map(i => esc(i.name) + "×" + i.amount).join(", ")}]</div></div>`
-      : `<div class="bad">Nic się nie bada.</div>`}
-    <div>Laboratoria: <b>${R.labs_working}/${R.labs}</b> pracuje ${Object.entries(R.labs_status || {}).map(([k, v]) => `<span class="tag">${esc(k)} ${v}</span>`).join("")} ${gpsBtns(R.labs_gps)}</div>
-    ${Object.keys(R.labs_missing || {}).length ? `<div class="bad">Brakuje w laboratoriach: ${Object.entries(R.labs_missing).map(([k, v]) => esc(k) + " (" + v + ")").join(", ")}</div>` : ""}
-    <div class="muted" style="margin-top:6px">Kolejka: ${(R.queue || []).map(esc).join(" → ") || "pusta"} · zbadane technologie: ${R.researched}</div>
-    ${d.science.length ? `<div class="tablewrap" style="margin-top:10px">${tbl(["Pakiet", "Prod./min|num", "Zużycie/min|num"], d.science.map(x => [esc(x.name), n1(x.prod), n1(x.cons)]))}</div>` : ""}`);
-
-  h += sec("lines", "Linie produkcyjne", d.lines.length,
-    `<input type="search" placeholder="Szukaj receptury…" value="${esc(lineFilter)}" oninput="lineFilter=this.value;renderLines()"><div id="linesTbl"></div>`);
-
-  h += sec("trend", "Trendy (24 h)", null, `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <input type="search" id="trendItem" list="items" placeholder="Przedmiot, np. iron-plate" style="margin:0">
-      <datalist id="items">${Object.keys(d.rates || {}).sort().map(k => `<option value="${esc(k)}">`).join("")}</datalist>
-      <button class="ghost" onclick="showTrend($('#trendItem').value)">Pokaż</button>
-      <button class="ghost" onclick="showTrend(null)">Ogólne</button>
-    </div><canvas id="chart"></canvas>`);
-
-  $("#app").innerHTML = h;
-  renderLines();
-  showTrend(trendItem);
-}
-
-function renderLines() {
-  const f = lineFilter.toLowerCase();
-  const rows = DATA.lines.filter(l => !f || l.recipe.toLowerCase().includes(f) || (l.product || "").toLowerCase().includes(f));
-  $("#linesTbl").innerHTML = tbl(["Receptura", "Maszyny|num", "Wykorzystanie", "Max/min|num", "Faktycznie/min|num", "Statusy", "Problemy"], rows.map(l => [
-    `<b>${esc(l.recipe)}</b><div class="s muted">${Object.entries(l.entities).map(([k, v]) => esc(k) + " ×" + v).join(", ")}</div>`,
-    `${l.working}/${l.machines}`,
-    `<div class="bar"><i style="width:${(l.utilization * 100).toFixed(0)}%;background:${l.utilization < .5 ? "var(--bad)" : l.utilization < .85 ? "var(--mid)" : "var(--good)"}"></i></div><span class="s muted">${pct(l.utilization)}</span>`,
-    n1(l.max_per_min), n1(l.actual_per_min),
-    Object.entries(l.status).map(([k, v]) => `<span class="tag">${esc(k)} ${v}</span>`).join(""),
-    l.problems.map(p => `<div class="s"><span class="muted">${esc(p.status)}:</span> ${gpsBtns(p.gps)}</div>`).join("")]));
-}
-
-async function showTrend(item) {
-  trendItem = item || null;
-  if (item) { const el = $("#trendItem"); if (el) el.value = item; }
-  const r = await fetch(BASE + "api/history" + (item ? "?item=" + encodeURIComponent(item) : ""), {cache: "no-store"});
-  const hist = await r.json();
-  const labels = hist.map(h => new Date(h.t * 1000).toLocaleTimeString("pl", {hour: "2-digit", minute: "2-digit"}));
-  const ds = item
-    ? [{label: item + " produkcja/min", data: hist.map(h => h.v[0]), borderColor: "#6cc070"},
-       {label: item + " zużycie/min", data: hist.map(h => h.v[1]), borderColor: "#e5534b"}]
-    : [{label: "Produkcja prądu (MW)", data: hist.map(h => h.power[0] / 1e6), borderColor: "#f2a33a"},
-       {label: "Zużycie prądu (MW)", data: hist.map(h => h.power[1] / 1e6), borderColor: "#6ea8fe"},
-       {label: "Pracujące maszyny %", data: hist.map(h => h.working_pct * 100), borderColor: "#6cc070", yAxisID: "y2"}];
-  if (chart) chart.destroy();
-  if (!window.Chart || !$("#chart")) return;
-  chart = new Chart($("#chart"), {
-    type: "line",
-    data: {labels, datasets: ds.map(x => ({...x, tension: .25, pointRadius: 0, borderWidth: 2}))},
-    options: {responsive: true, maintainAspectRatio: false, interaction: {mode: "index", intersect: false},
-      plugins: {legend: {labels: {color: "#e6e2da"}}},
-      scales: {x: {ticks: {color: "#9a958c", maxTicksLimit: 12}, grid: {color: "#393e46"}},
-               y: {ticks: {color: "#9a958c"}, grid: {color: "#393e46"}},
-               ...(item ? {} : {y2: {position: "right", min: 0, max: 100, ticks: {color: "#6cc070"}, grid: {display: false}}})}}
-  });
-}
-
-function card(k, v, s, cls) { return `<div class="card"><div class="k">${k}</div><div class="v ${cls || ""}">${v}</div><div class="s">${s}</div></div>`; }
-function sec(id, title, n, body) {
-  return `<section id="${id}"><h2>${title}${n != null ? ` <span class="n">${n}</span>` : ""}</h2>${body}</section>`;
-}
-function tbl(cols, rows) {
-  if (!rows.length) return `<div class="empty">Brak — super.</div>`;
-  const hd = cols.map(c => { const [t, cl] = c.split("|"); return `<th class="${cl || ""}">${t}</th>`; }).join("");
-  const cl = cols.map(c => c.split("|")[1] || "");
-  return `<div class="tablewrap"><table><thead><tr>${hd}</tr></thead><tbody>${rows.map(r =>
-    `<tr>${r.map((v, i) => `<td class="${cl[i]}">${v}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
-}
-
-load();
-setInterval(() => { if (!document.hidden) load(); }, 60000);
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<script src="map.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>
