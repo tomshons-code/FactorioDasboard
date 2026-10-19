@@ -101,6 +101,18 @@ def _cause_chain(item, crafters, producers, mining_resources, depth=0, seen=None
     return [{"item": item, "reason": "za mało maszyn (%d) — wszystkie pracują, nie nadążają" % machines}]
 
 
+GROUPS = [("working", OK), ("blocked", BLOCKED), ("shortage", SHORTAGE), ("power", POWER)]
+
+
+def status_groups(crafters):
+    out = {"working": 0, "blocked": 0, "shortage": 0, "power": 0, "other": 0}
+    for r in crafters.values():
+        for st, n in d(r.get("status")).items():
+            g = next((name for name, members in GROUPS if st in members), "other")
+            out[g] += n
+    return out
+
+
 def analyze(raw):
     rates = _rates(raw)
     crafters = d(raw.get("crafters"))
@@ -274,6 +286,7 @@ def analyze(raw):
             "working_pct": working_machines / total_machines if total_machines else 0,
             "power_w": sum(n["consumption_w"] for n in nets),
             "power_prod_w": sum(n["production_w"] for n in nets),
+            "groups": status_groups(crafters),
             "low_power": low_power, "shortages": len(shortages), "deficits": len(deficits),
             "blocked": len(blocked), "depleted_drills": depleted_total,
             "capacity_w": sum(n["capacity_w"] for n in nets),

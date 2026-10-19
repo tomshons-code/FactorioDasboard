@@ -349,3 +349,8 @@ th.num { font-family: var(--font); }
 @media (max-width: 860px) { #unitBtn { display: none; } }
 #spmInput { width: 64px; flex: none; }
 .badge { white-space: nowrap; }
+.stack { display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-top: 10px; background: var(--panel2); }
+.stack i { display: block; height: 100%; }
+.stack-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 7px; font-size: 11.5px; color: var(--muted); }
+.stack-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.stack-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }

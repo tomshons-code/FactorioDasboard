@@ -171,7 +171,9 @@ function vOverview(el) {
   const top = (d.suggestions || []).slice(0, 5);
   const alerts = d.alerts || [];
   const loadV = s.capacity_w ? s.power_w / s.capacity_w : null;
-  const mood = s.working_pct >= .85 ? "działa jak w zegarku" : s.working_pct >= .65 ? "pracuje, ale coś ją hamuje" : "ma poważne zatory";
+  const G = s.groups || {}, gTot = Object.values(G).reduce((a, b) => a + b, 0) || 1;
+  const jam = (G.blocked || 0) / gTot >= .5;
+  const mood = jam ? "stoi zapchana" : s.working_pct >= .85 ? "działa jak w zegarku" : s.working_pct >= .65 ? "pracuje, ale coś ją hamuje" : "ma poważne zatory";
   el.innerHTML = `
   <div class="hero">
     <div class="txt">
@@ -189,7 +191,7 @@ function vOverview(el) {
     <div class="art"><img src="img/factory.svg" alt=""></div>
   </div>
   <div class="kpis">
-    ${kpi("cpu", "Maszyny pracują", pct(s.working_pct), `${s.working} z ${s.machines}`, s.working_pct < .65 ? "bad" : s.working_pct < .85 ? "warn" : "good", meter(s.working_pct, s.working_pct < .65 ? "bad" : "good"))}
+    ${kpi("cpu", "Maszyny pracują", pct(s.working_pct), `${s.working} z ${s.machines}` + (G.blocked ? ` · ${G.blocked} z pełnym wyjściem` : ""), jam ? "warn" : s.working_pct < .65 ? "bad" : s.working_pct < .85 ? "warn" : "good", statusBar(G))}
     ${kpi("power", "Zużycie prądu", watts(s.power_w), loadV != null ? `${pct(loadV)} maks. mocy (${watts(s.capacity_w)})` : `produkcja ${watts(s.power_prod_w)}`, loadV > .9 || s.low_power ? "bad" : loadV > .75 ? "warn" : "", loadV != null ? meter(loadV, loadV > .9 ? "bad" : "") : "")}
     ${kpi("alert", "Braki składników", s.shortages, s.shortages ? "rodzajów — zobacz Produkcję" : "wszystko dociera", s.shortages ? "bad" : "good")}
     ${kpi("suggestions", "Sugestie", s.suggestions, "pomysłów na poprawę", s.suggestions ? "warn" : "good")}
@@ -207,6 +209,14 @@ function vOverview(el) {
     ${card("Produkcja nauki", table(["Pakiet", "Produkcja" + UL() + "|num", "Zużycie" + UL() + "|num", "Bilans|num"], (d.science || []).map(x => [item(x.name), rt(x.prod), rt(x.cons), `<span class="${x.prod - x.cons < -0.5 ? "neg" : "pos"}">${x.prod - x.cons >= 0 ? "+" : ""}${rt(x.prod - x.cons)}</span>`]), {empty: empty("Brak nauki", "Nie produkujesz jeszcze pakietów.")}), {hint: "średnia z 10 min"})}
     ${card("Najwięcej produkujesz", table(["Przedmiot", "Produkcja" + UL() + "|num", "Zużycie" + UL() + "|num"], (d.top_production || []).slice(0, 10).map(x => [item(x.name), rt(x.prod), rt(x.cons)])), {hint: "top 10"})}
   </div>`;
+}
+
+const GROUP_UI = [["working", "pracuje", "#34d399"], ["blocked", "pełne wyjście", "#60a5fa"], ["shortage", "brak składników", "#fbbf24"], ["power", "brak prądu", "#f87171"], ["other", "inne", "#7d8799"]];
+function statusBar(G) {
+  const tot = Object.values(G || {}).reduce((a, b) => a + b, 0);
+  if (!tot) return "";
+  return `<div class="stack">${GROUP_UI.map(([k, , c]) => G[k] ? `<i style="width:${(G[k] / tot * 100).toFixed(2)}%;background:${c}"></i>` : "").join("")}</div>
+    <div class="stack-legend">${GROUP_UI.map(([k, l, c]) => G[k] ? `<span><i style="background:${c}"></i>${l} ${G[k]}</span>` : "").join("")}</div>`;
 }
 
 function sugRow(x) {

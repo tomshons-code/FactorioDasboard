@@ -96,6 +96,16 @@ def build(raw, a, rates):
         out.append({"severity": sev, "kind": kind, "title": title, "detail": detail, "gps": gps, "item": item})
 
     cap, demand, prod_lines, cons_lines = capacity_model(raw, rates)
+    groups = _d(a.get("summary", {}).get("groups"))
+    total = sum(groups.values())
+    if total >= 10 and groups.get("blocked", 0) >= total * 0.5:
+        research_idle = not _d(raw.get("research")).get("current")
+        add("high", "rebalance", "Fabryka zapchana — %d%% maszyn ma pełne wyjście" % (groups["blocked"] * 100 / total),
+            ("Nic się nie bada, więc laboratoria nie zużywają nauki i wszystko stoi w korku aż do hut. "
+             "Ustaw badanie w grze (klawisz T) i dodaj kilka technologii do kolejki — fabryka ruszy sama.")
+            if research_idle else
+            ("Produkcja przewyższa zużycie. To normalne dla malla, ale jeśli stoją linie nauki, "
+             "dołóż laboratoria albo podnieś cel SPM i rozbuduj konsumentów."))
     for sh in a.get("shortages") or []:
         item = sh["item"]
         waiting = sh["machines"]
