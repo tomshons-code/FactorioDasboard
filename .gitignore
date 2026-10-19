@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+data/
+server/config.json
+mcp/config.json
+.mcp.json
+.claude/

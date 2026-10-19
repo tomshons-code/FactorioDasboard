@@ -1,0 +1,9 @@
+{
+  "name": "factorio-bot-collector",
+  "version": "0.1.0",
+  "title": "Factorio Bot Collector",
+  "author": "tomas",
+  "description": "Zbiera statystyki fabryki dla dashboardu. Ładowany TYLKO na kopii zapisu (serwer-cień), nigdy na prawdziwym serwerze.",
+  "factorio_version": "2.0",
+  "dependencies": ["base"]
+}
